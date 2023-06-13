@@ -10,7 +10,14 @@ var jwt = require('jsonwebtoken');
 app.use(express.json());
 app.use(cookieParser());
 
+const { client } = require('./lib/mongodb');
+
 app.get('/', (req, res) => {
+  res.send('Hello World!')
+})
+
+app.post('/', (req, res) => {
+  
   res.send('Hello World!')
 })
 
