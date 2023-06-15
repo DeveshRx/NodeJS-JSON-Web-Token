@@ -17,8 +17,26 @@ app.get('/', (req, res) => {
 })
 
 app.post('/', (req, res) => {
-  
-  res.send('Hello World!')
+  console.log('/ -> Cookies: ')
+  console.log(req.cookies);
+
+  res.json({ cookies: req.cookies });
+})
+
+app.post('/verify', (req, res) => {
+  console.log('/verify -> Verify: ')
+  const token = req.cookies.token;
+
+  console.log(req.cookies);
+
+  // verify a token symmetric - synchronous
+  var decoded = jwt.verify(token, 'shhhhh');
+  console.log('decoded', decoded)
+  res.json({
+    cookies: req.cookies,
+    decoded: decoded
+  });
+
 })
 
 
@@ -35,6 +53,23 @@ app.post('/register', async (req, res) => {
   const myEncPassword = await bcrypt.hash(password, 10);
 
   // save the user in DB with enc password
+  const database = client.db("ExpDB");
+  const med = database.collection("expdb");
+
+  const data = {
+    _id: 1234,
+    fname: fname,
+    lname: lname,
+    email: email,
+    password: myEncPassword
+  };
+
+  var newVal = { $set: data };
+
+
+  await med.updateOne({ _id: Number(data._id) }, newVal, {
+    upsert: true,
+  });
 
   // generate token & send it
   var token = jwt.sign(
@@ -46,6 +81,7 @@ app.post('/register', async (req, res) => {
       expiresIn: '2h'
     }
   );
+  console.log("Gen Tokem: " + token);
 
   const user = { fname: fname, lname: lname, email: email, token: token };
 
@@ -56,23 +92,48 @@ app.post('/register', async (req, res) => {
 
 
 app.post('/login', async (req, res) => {
-  const encPassword = "";
+  var encPassword = "";
   try {
     // get all data from user
     const { email, password } = req.body;
 
     // find user in db
-    // ....
+    const database = client.db("ExpDB");
+    const med = database.collection("expdb");
+
+    const user = await med.findOne({ email: email });
+    console.log("---\nuser", user);
+
+    if (user != null) {
+      encPassword = user.password;
+
+    }
+
+    if (encPassword == null) {
+      res.send("email invalid");
+
+    }
     // match password
+
     const isValid = await bcrypt.compare(password, encPassword);
-    const token = "";
+    var token = "";
     if (isValid) {
       // create jwt token
-      token = "xx"
+      token = jwt.sign(
+        {
+          email: user.email,
+        },
+        'shhhhh',
+        {
+          expiresIn: '1h'
+        }
+      );
     }
 
     // send a token in user cookie
-    console.log('Cookies: ', req.cookies)
+    console.log('Cookies: ')
+    console.log(req.cookies);
+
 
 
     const options = {
